@@ -1,0 +1,224 @@
+---
+title: "From Tricky to Trouble-Free Trails: MachLeish Trail Rating System "
+author: "Anna Ballou and Jessica Jacinto"
+date: "4/15/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+ 
+Link to github repository [^1] 
+ 
+```{r, message = FALSE}
+library(tidyverse)
+library(sf)
+library(macleish)
+library(RSQLite)
+library(leaflet)
+library(readr)
+```
+
+**Problem Statement:**
+We are attempting to rate the trails at MacLeish by difficulty. Currently, no such rating system for MacLeish exists. In doing so, hikers will be able to choose a trail that best fits their hiking needs. 
+
+**Examine Trails data (group by name and summarize by length) and Contours data: **
+```{r, warning = FALSE}
+trails <- macleish_layers %>%
+  pluck("trails") 
+
+trails <- trails %>%
+  mutate(length = st_length(trails)) %>%
+  group_by(name) %>%
+  summarize(length = sum(length))
+
+contours <- macleish_layers %>%
+  pluck("contours_30ft") 
+```
+
+**Find the intersections of Each Trail with the Contour lines: **
+```{r, warning = FALSE, message = FALSE}
+intersection <- st_intersection(
+  pluck(macleish_layers, "trails"), 
+  pluck(macleish_layers, "contours_30ft"))
+
+western <- filter(intersection, name == "Western Loop")
+western_pts <- western %>% 
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+vernal <- filter(intersection, name == "Vernal Pool Loop")
+vernal_pts <- vernal %>%
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+snowmobile <- filter(intersection, name == "Snowmobile Trail")
+snowmobile_pts <- snowmobile %>%
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+porcupine <- filter(intersection, name == "Porcupine Trail")
+porcupine_pts <- porcupine %>%
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+poplar_hill <- filter(intersection, name == "Poplar Hill Road")
+poplar_hill_pts <- poplar_hill %>%
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+
+eastern <- filter(intersection, name == "Eastern Loop")
+eastern_pts <- eastern %>%
+  st_cast("MULTIPOINT") %>% 
+  st_cast("POINT")
+```
+
+**Plot the trails and Contours for future Reference:**
+```{r, warning = FALSE}
+trail_plot <- leaflet() %>%
+  addTiles() %>%
+  addPolylines(data = trails, 
+               weight = 2, 
+               color = "black") %>%
+  addPolylines(data = contours,
+               weight = 1,
+               color = "red") 
+trail_plot
+```
+
+**Find Elevation Changes**
+
+Note: [^2] 
+
+*Shenandoah's Hiking Difficulty is determined by a numerical rating using the following formula: *
+
+*Elevation Gain x 2 x distance (in miles). The product's square root is the numerical rating.* 
+
+*For example, a 10-mile hike that gains 2,200 feet in elevation:*
+*2,200 x 2=4,400 *
+*4,400 x 10 = 44,000*
+*Square root of 44,000=209.8*
+
+
+```{r, warning = FALSE}
+Shenandoah_western <- western_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT))
+```
+The Western Loop's gain in elevation is 90ft per the above calculation
+
+```{r, warning = FALSE}
+Shenandoah_vernal <- vernal_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT))
+```
+The Vernal Pool Loop's gain in elevation is 30ft per the above calculation. 
+
+```{r, warning = FALSE}
+Shenandoah_snowmobile <- snowmobile_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT))
+```
+The Snowmobile Trail's gain in elevation is 120ft per the above calculation. 
+
+```{r, warning = FALSE}
+Shenandoah_porcupine <- porcupine_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT))
+```
+The Porcupine trail does not change elevation with the 30 ft contour lines (per the above calucation)
+
+```{r, warning = FALSE}
+Shenandoah_eastern <- eastern_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT))
+```
+
+The Eastern Loop's gain in elevation is 30ft per the above calculation. 
+```{r, warning = FALSE}
+Shenandoah_poplar <- poplar_hill_pts %>%
+  select("CONTOUR_FT") %>%
+  mutate(change_in_elevation = max(CONTOUR_FT) - min(CONTOUR_FT)) %>%
+  group_by(change_in_elevation) %>%
+  summarize(mean(CONTOUR_FT)) 
+```
+
+The Poplar Hill Road's gain in elevation is 60ft per the above calculation. 
+
+
+**Finding Shenandoah ranking: **
+
+*Elevation Gain x 2 x distance(miles)*
+
+Western Loop: square-root[(90)(2)(0.8392)] = 15.92
+
+Vernal Pool Trail:
+square-root[(30)(2)(0.2240)] = 2.45
+
+Snowmobile Trail: 
+square-root[(120)(2)(1.6)]
+= 35.05
+
+Porcupine Trail:
+= 0 
+
+Eastern Loop:
+square-root[(30)(2)(1.2)] 
+= 13.15
+
+Poplar Hill Trail:
+square-root[(60)(2)(0.65))]
+= 10.069
+
+**Create a data.frame with the trails and their Shenandoah rankings**
+
+*Note: Shenandoah rankings involve much more techerous trails, thus the ranges of rankings were adjusted for the RELATIVE difficulty of the MacLeish trails*
+
+```{r, warning = FALSE, message = FALSE}
+shenandoah_ranking <- read_csv("shen_rankings.csv")
+```
+
+```{r, warning = FALSE, message = FALSE}
+ranked_trails <- trails %>%
+  full_join(shenandoah_ranking, by = c("name")) %>%
+  mutate(rank = ifelse(ranking < 15, "Easy", ifelse(ranking < 25 & ranking > 15, "Moderate", ifelse(ranking > 25 , "Difficult", "Not Ranked"))))
+  
+```                    
+
+**Create a data graphic that shows the trails ranked by difficulty**
+```{r, warning = FALSE}
+factpal <- colorFactor(palette = c("red", "blue", "orange"), domain = ranked_trails$rank)
+```
+
+```{r, warning = FALSE}
+trail_ranking_plot <- leaflet() %>%
+  addTiles() %>%
+  addPolylines(data = ranked_trails, 
+               weight = 2.5, 
+               color = ~factpal(rank)) %>%
+  addLegend(colors = c("blue", "orange", "red"), position = c("bottomleft"), labels = c("Easy", "Moderate","Difficult"))
+trail_ranking_plot
+```
+
+
+**Discussion:**
+
+
+**Footnotes**
+
+[^1]: https://github.com/aballou16/mp3.git
+[^2]: https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
+
