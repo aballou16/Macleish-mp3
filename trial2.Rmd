@@ -200,7 +200,7 @@ ranked_trails <- trails %>%
 
 **Create a data graphic that shows the trails ranked by difficulty**
 ```{r, warning = FALSE}
-factpal <- colorFactor(palette = c("red", "blue", "orange"), domain = ranked_trails$rank)
+factpal <- colorFactor(palette = c("red", "green", "orange"), domain = ranked_trails$rank)
 ```
 
 ```{r, warning = FALSE}
@@ -209,7 +209,7 @@ trail_ranking_plot <- leaflet() %>%
   addPolylines(data = ranked_trails, 
                weight = 2.5, 
                color = ~factpal(rank)) %>%
-  addLegend(colors = c("blue", "orange", "red"), position = c("bottomleft"), labels = c("Easy", "Moderate","Difficult"))
+  addLegend(colors = c("green", "orange", "red"), position = c("bottomleft"), labels = c("Easy", "Moderate","Difficult"))
 trail_ranking_plot
 ```
 
