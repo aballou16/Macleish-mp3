@@ -222,6 +222,6 @@ Now that we know this information it would be great for the people who intend to
 
 **Footnotes**
 
-[^1]: https://github.com/aballou16/mp3.git
+[^1]: https://github.com/aballou16/Macleish-mp3.git
 [^2]: https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm
 
